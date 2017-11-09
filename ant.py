@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from numpy import *
-from pylab import *
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import random
 import sys
-import G2D
 import copy
 import time
 
@@ -18,8 +16,33 @@ def random_int_list(start, stop, length):
     for i in range(length):
         random_list.append(random.randint(start, stop))
     return random_list
+	
+def G2D(G):
+	L = G.shape[0]
+	D = zeros((L * L,L * L),float)
+	i = 0
+	while(i != L):	
+		j = 0
+		while(j != L):		
+			if(G[i,j] ==  0):
+				m = 0
+				while(m != L):		
+					n =  0
+					while(n != L):
+						if(G[m,n] == 0):
+							im = float(abs(i - m))
+							jn = float(abs(j - n))
+							if(((im + jn) == 1) | ((im == 1) & (jn == 1))):
+								D[(i)*L+j,(m)*L+n] = (im+jn)**0.5
+						n += 1
+					m += 1
+			j += 1
+		i += 1
+	return D
+	
+	
 
-NNUM = 7                                         #地图边长
+NNUM = 10                                        #地图边长
 
 G = matrix([[0,1,0,0,0,0,0],            #自定义地图 1为障碍，边长要对应地图边长
 						[0,1,0,0,0,1,1],
@@ -29,33 +52,34 @@ G = matrix([[0,1,0,0,0,0,0],            #自定义地图 1为障碍，边长要�
 						[1,0,0,0,1,0,1],
 						[1,1,1,0,0,0,0]])
 
-#```                 以下为随机地图			若选择自定义地图，去掉前面的#号和后面的#号			
-prar = random_int_list(1,NNUM*NNUM - 2,NNUM * 2)          #最后一个参数为障碍数量，地图边长变短时可能需要适当减少，不然可能生成不恰当的地图
+#'''                 以下为随机地图			若选择自定义地图，去掉前面的#号和后面的#号			
+
+prar = random_int_list(1,NNUM*NNUM - 2,NNUM * 4)          #最后一个参数为障碍数量，地图边长变短时可能需要适当减少，不然可能生成不恰当的地图
 G = zeros((NNUM,NNUM));
 for pp in prar:
 	x = pp//NNUM
 	y = pp%NNUM
 	G[x][y] = 1
-print(prar)               #障碍的位置
-#```        随机地图生成结束
+print(prar)               #障碍的位置    随机地图生成结束
+#'''       
 
 time_start=time.time()
 MM = G.shape[0]   #G 地形图为01矩阵，如果为1表示障碍物
 Tau = ones((MM*MM,MM*MM)) # Tau 初始信息素矩阵（认为前面的觅食活动中有残留的信息素）
 Tau = 8.*Tau
-K = 40   #K 迭代次数（指蚂蚁出动多少波）
-M = 50   #M 蚂蚁个数（每一波蚂蚁有多少个）
+K = 60   #K 迭代次数（指蚂蚁出动多少波）
+M = 20   #M 蚂蚁个数（每一波蚂蚁有多少个）
 S = 0   #S 起始点（最短路径的起始点）
 E = MM*MM - 1   #E 终止点（最短路径的目的点）
-Alpha = 1    # Alpha 表征信息素重要程度的参数
-Beta = 7     #Beta 表征启发式因子重要程度的参数
-Rho = 0.3      # Rho 信息素蒸发系数
+Alpha = 4    # Alpha 表征信息素重要程度的参数
+Beta = 6    #Beta 表征启发式因子重要程度的参数
+Rho = 0.4      # Rho 信息素蒸发系数
 Q = 1         # Q 信息素增加强度系数
 minkl = inf
 mink = 0
 minl = 0
 load = ''             #进度条显示
-D = G2D.G2D(G)
+D = G2D(G)
 
 N = D.shape[0] 
 a = 1
@@ -68,12 +92,12 @@ Eta = zeros((N,N))
 #构造启发式信息矩阵
 i = 0
 while(i != N):
-	ix = a*(mod(i,MM - 1) - 0.5)
+	ix = a*(mod(i,MM) - 0.5)
 	if(ix == -0.5):
 		ix = MM - 0.5
 	iy = a * (MM + 0.5 - ceil(i/MM))
 	if (i != E):
-		Eta[i][0]=1/(((ix - Ex)**2+(iy-Ey)**2)**0.5)
+		Eta[i][0]=1/(((ix - Ex)**2+(iy - Ey)**2)**0.5)
 	else:
 		Eta[i][0] = 100
 	i += 1
@@ -108,21 +132,21 @@ while(k != K):
 		Len_LJD = len(LJD[0])    #计算出可以走的节点数量
 		while((W != E) & (Len_LJD >= 1) ):              #如果无路可走或走到食物就退出
 		#用转轮赌法选择下一步
-			PP = zeros((Len_LJD,Len_LJD))
+			PP = zeros(Len_LJD)
 			i = 0
 			while(i !=  Len_LJD):
-				PP[i][0] = (Tau[W,LJD[0][i]]**Alpha)*((Eta[LJD[0][i]][0])**Beta)
+				PP[i] = (Tau[W,LJD[0][i]]**Alpha)*((Eta[LJD[0][i]][0])**Beta)
 				i += 1
 			sumPP = sum(PP)
 			PP = PP/sumPP
 			Pcum = zeros(Len_LJD)
-			Pcum[0] = PP[0][0]
+			Pcum[0] = PP[0]
 			i = 1
 			while(i != Len_LJD):
-				Pcum[i] = Pcum[i - 1] + PP[i][0]
+				Pcum[i] = Pcum[i - 1] + PP[i]
 				i += 1
 			rand = random.random()
-			Select = nonzero(Pcum >= rand)
+			Select = nonzero(Pcum > rand)
 			to_visit = LJD[0][Select[0][0]]
 			
 			
@@ -156,7 +180,7 @@ while(k != K):
 				minl = m 
 				minkl = PLkm
 		else:
-			PL[k][m] = 0
+			PL[k][m] = NNUM*NNUM
 		m += 1
 		
 	#更新信息素
@@ -184,28 +208,6 @@ print('路径：',str(ROUTES[mink*M + minl]))		#输出最短的一条路径
 print('路程长度：',str(PL[mink][minl]))
 if(ROUTES[mink*M + minl][-1] != NNUM*NNUM - 1):
 	print('没找到')
-	
-	
-plt.figure(dpi = 200)
-ax = plt.subplot(111)
-ymajorLocator   = MultipleLocator(2)
-yminorLocator   = MultipleLocator(1)
-fd = []
-o = []
-oo = 0
-for ll in PL:
-		for qq in ll:
-			if(qq == 0):
-				continue
-			o.append(oo)
-			fd.append(qq)
-			oo += 1
-plt.figure(1)
-plt.plot(o, fd,'k',o, fd,'ro', markersize=1)
-ax.yaxis.set_major_locator(ymajorLocator)
-ax.yaxis.set_minor_locator(yminorLocator)
-ax.xaxis.grid(True, which='major') #x坐标轴的网格使用主刻度
-ax.yaxis.grid(True, which='minor') #y坐标轴的网格使用次刻度
 
 t = 0
 xian = ''
@@ -234,6 +236,29 @@ while(i != NNUM):
 	i += 1
 for x in Pic:
 	print(x)
+
+PL.sort()
+plt.figure(dpi = 200)
+ax = plt.subplot(111)
+ymajorLocator   = MultipleLocator(2)
+yminorLocator   = MultipleLocator(1)
+fd = []
+o = []
+oo = 0
+for qq in PL:
+		
+		if(qq[0] == NNUM*NNUM):
+			continue
+		o.append(oo)
+		fd.append(qq[0] )
+		oo += 1
+plt.figure(1)
+plt.plot(o, fd,'k',o, fd,'ro', markersize=1)
+ax.yaxis.set_major_locator(ymajorLocator)
+ax.yaxis.set_minor_locator(yminorLocator)
+ax.xaxis.grid(True, which='major') #x坐标轴的网格使用主刻度
+ax.yaxis.grid(True, which='minor') #y坐标轴的网格使用次刻度
+plt.show()
+
 time_end=time.time()
 print (str(time_end-time_start) , 's') #输出程序运行时间
-plt.show()
