@@ -3,6 +3,8 @@
 
 from numpy import *
 from pylab import *
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import random
 import sys
 import G2D
@@ -17,7 +19,7 @@ def random_int_list(start, stop, length):
         random_list.append(random.randint(start, stop))
     return random_list
 
-NNUM = 25                                          #地图边长
+NNUM = 7                                         #地图边长
 
 G = matrix([[0,1,0,0,0,0,0],            #自定义地图 1为障碍，边长要对应地图边长
 						[0,1,0,0,0,1,1],
@@ -28,7 +30,7 @@ G = matrix([[0,1,0,0,0,0,0],            #自定义地图 1为障碍，边长要�
 						[1,1,1,0,0,0,0]])
 
 #```                 以下为随机地图			若选择自定义地图，去掉前面的#号和后面的#号			
-prar = random_int_list(1,NNUM*NNUM - 2,NNUM * 8)          #最后一个参数为障碍数量，地图边长变短时可能需要适当减少，不然可能生成不恰当的地图
+prar = random_int_list(1,NNUM*NNUM - 2,NNUM * 2)          #最后一个参数为障碍数量，地图边长变短时可能需要适当减少，不然可能生成不恰当的地图
 G = zeros((NNUM,NNUM));
 for pp in prar:
 	x = pp//NNUM
@@ -41,8 +43,8 @@ time_start=time.time()
 MM = G.shape[0]   #G 地形图为01矩阵，如果为1表示障碍物
 Tau = ones((MM*MM,MM*MM)) # Tau 初始信息素矩阵（认为前面的觅食活动中有残留的信息素）
 Tau = 8.*Tau
-K = 50   #K 迭代次数（指蚂蚁出动多少波）
-M = 30   #M 蚂蚁个数（每一波蚂蚁有多少个）
+K = 40   #K 迭代次数（指蚂蚁出动多少波）
+M = 50   #M 蚂蚁个数（每一波蚂蚁有多少个）
 S = 0   #S 起始点（最短路径的起始点）
 E = MM*MM - 1   #E 终止点（最短路径的目的点）
 Alpha = 1    # Alpha 表征信息素重要程度的参数
@@ -178,7 +180,33 @@ while(k != K):
 	print(load)   #进度显示
 	k += 1
 #算法结束，下面是图像显示
-print(ROUTES[mink*M + minl])		#输出最短的一条路径
+print('路径：',str(ROUTES[mink*M + minl]))		#输出最短的一条路径
+print('路程长度：',str(PL[mink][minl]))
+if(ROUTES[mink*M + minl][-1] != NNUM*NNUM - 1):
+	print('没找到')
+	
+	
+plt.figure(dpi = 200)
+ax = plt.subplot(111)
+ymajorLocator   = MultipleLocator(2)
+yminorLocator   = MultipleLocator(1)
+fd = []
+o = []
+oo = 0
+for ll in PL:
+		for qq in ll:
+			if(qq == 0):
+				continue
+			o.append(oo)
+			fd.append(qq)
+			oo += 1
+plt.figure(1)
+plt.plot(o, fd,'k',o, fd,'ro', markersize=1)
+ax.yaxis.set_major_locator(ymajorLocator)
+ax.yaxis.set_minor_locator(yminorLocator)
+ax.xaxis.grid(True, which='major') #x坐标轴的网格使用主刻度
+ax.yaxis.grid(True, which='minor') #y坐标轴的网格使用次刻度
+
 t = 0
 xian = ''
 while(t != NNUM):
@@ -208,3 +236,4 @@ for x in Pic:
 	print(x)
 time_end=time.time()
 print (str(time_end-time_start) , 's') #输出程序运行时间
+plt.show()
